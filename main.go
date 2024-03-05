@@ -14,6 +14,8 @@ import (
 // ROUTES
 
 // Register user
+// Create Currencies - memory for now, once we have the scrapper we're going to pushed them to the db
+// Update currencies by scrapping in x interval
 // Register assets (currencies)
 // Get total balance
 // Get currencies
@@ -60,6 +62,9 @@ func main() {
 	userController := UserController()
 	router.Post("/users", userController.handleCreateUser)
 	router.Get("/users/{apiKey}", userController.handleGetUserByApiKey)
+
+	currencyController := CurrencyController()
+	router.Post("/currencies", currencyController.createCurrencies)
 
 	server := http.Server{
 		Handler: router,
