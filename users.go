@@ -24,6 +24,25 @@ func UserController() *userController {
 	return &userController{}
 }
 
+func parseApiKeyFromUrl(w http.ResponseWriter, r *http.Request) (*uuid.UUID, error) {
+	apiKeyStr := chi.URLParam(r, "apiKey")
+	apiKey, err := uuid.Parse(apiKeyStr)
+	if err != nil {
+		return nil, err
+	}
+	return &apiKey, nil
+}
+
+func (u *userController) getUserByApiKey(apiKey uuid.UUID) *User {
+	var userFromApiKey *User
+	for i, user := range u.users {
+		if user.ApiKey == apiKey {
+			userFromApiKey = &u.users[i]
+		}
+	}
+	return userFromApiKey
+}
+
 func (u *userController) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	type body struct {
 		Name string
@@ -48,19 +67,13 @@ func (u *userController) handleCreateUser(w http.ResponseWriter, r *http.Request
 }
 
 func (u *userController) handleGetUserByApiKey(w http.ResponseWriter, r *http.Request) {
-	apiKeyStr := chi.URLParam(r, "apiKey")
-	apiKey, err := uuid.Parse(apiKeyStr)
+	apiKey, err := parseApiKeyFromUrl(w, r)
 	if err != nil {
-		respondWithError(w, 400, fmt.Sprintf("Error parsing apiKey - apiKey not valid - %v", err))
+		respondWithError(w, 400, fmt.Sprintf("Error decoding request body - %v", err))
+		return
 	}
 
-	user := User{}
-	for _, u := range u.users {
-		if u.ApiKey == apiKey {
-			user = u
-		}
-	}
-
+	user := u.getUserByApiKey(*apiKey)
 	if user.Name == "" {
 		respondWithError(w, 400, fmt.Sprint("Error fetching user by api key - user not found"))
 		return
@@ -69,27 +82,45 @@ func (u *userController) handleGetUserByApiKey(w http.ResponseWriter, r *http.Re
 	respondWithJSON(w, 200, user)
 }
 
-// func (u *userController) handleCreateUserAssets(w http.ResponseWriter, r *http.Request) {
-// 	type body struct {
+type assetHandler func(http.ResponseWriter, *http.Request, *[]Currency)
 
-// 	}
+func assetMiddleware(handler assetHandler, c *[]Currency) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		handler(w, r, c)
+	}
+}
 
-// 	apiKey, err := uuid.Parse(apiKeyStr)
-// 	if err != nil {
-// 		respondWithError(w, 400, fmt.Sprintf("Error parsing apiKey - apiKey not valid - %v", err))
-// 	}
+func (u *userController) handleCreateUserAssets(w http.ResponseWriter, r *http.Request, currencies *[]Currency) {
+	cc := make([]string, 0)
 
-// 	user := User{}
-// 	for _, u := range u.users {
-// 		if u.ApiKey == apiKey {
-// 			user = u
-// 		}
-// 	}
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&cc)
+	if err != nil {
+		respondWithError(w, 400, fmt.Sprintf("Error decoding body params - %v", err))
+		return
+	}
 
-// 	if user.Name == "" {
-// 		respondWithError(w, 400, fmt.Sprint("Error fetching user by api key - user not found"))
-// 		return
-// 	}
+	apiKey, err := parseApiKeyFromUrl(w, r)
+	if err != nil {
+		respondWithError(w, 400, fmt.Sprintf("Error decoding request body - %v", err))
+		return
+	}
 
-// 	respondWithJSON(w, 200, user)
-// }
+	ccMap := make(map[string]Currency)
+	for _, c := range *currencies {
+		ccMap[c.Code] = c
+	}
+
+	user := u.getUserByApiKey(*apiKey)
+
+	for _, currency := range cc {
+		c, ok := ccMap[currency]
+		if !ok {
+			respondWithError(w, 400, fmt.Sprintf("Error updating user assets - currency not valid - %v", currency))
+			return
+		}
+		user.Currencies = append(user.Currencies, c)
+	}
+
+	respondWithJSON(w, 200, user)
+}
