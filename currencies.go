@@ -20,7 +20,7 @@ func CurrencyController() *currencyController {
 	return &currencyController{}
 }
 
-func (c *currencyController) createCurrencies(w http.ResponseWriter, r *http.Request) {
+func (c *currencyController) handleCreateCurrencies(w http.ResponseWriter, r *http.Request) {
 	currencies := []Currency{}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&currencies)
@@ -29,5 +29,11 @@ func (c *currencyController) createCurrencies(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	c.currencies = currencies
+
 	respondWithJSON(w, 201, currencies)
+}
+
+func (c *currencyController) handleGetCurrencies(w http.ResponseWriter, r *http.Request) {
+	respondWithJSON(w, 201, c.currencies)
 }
