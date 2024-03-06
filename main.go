@@ -65,6 +65,7 @@ func main() {
 	router.Post("/users", userController.handleCreateUser)
 	router.Get("/users/{apiKey}", userController.handleGetUserByApiKey)
 	router.Post("/users/assets/{apiKey}", assetMiddleware(userController.handleCreateUserAssets, &currencyController.currencies))
+	router.Get("/users/balance/{apiKey}", userController.handleGetUserByApiKey)
 
 	router.Post("/currencies", currencyController.handleCreateCurrencies)
 	router.Get("/currencies", currencyController.handleGetCurrencies)

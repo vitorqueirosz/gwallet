@@ -9,11 +9,16 @@ import (
 	"github.com/google/uuid"
 )
 
+type Asset struct {
+	Code   string
+	Amount string
+}
+
 type User struct {
-	ID         uuid.UUID
-	Name       string
-	ApiKey     uuid.UUID
-	Currencies []Currency
+	ID     uuid.UUID
+	Name   string
+	ApiKey uuid.UUID
+	Assets []Asset
 }
 
 type userController struct {
@@ -91,10 +96,10 @@ func assetMiddleware(handler assetHandler, c *[]Currency) http.HandlerFunc {
 }
 
 func (u *userController) handleCreateUserAssets(w http.ResponseWriter, r *http.Request, currencies *[]Currency) {
-	cc := make([]string, 0)
+	assets := []Asset{}
 
 	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&cc)
+	err := decoder.Decode(&assets)
 	if err != nil {
 		respondWithError(w, 400, fmt.Sprintf("Error decoding body params - %v", err))
 		return
@@ -113,14 +118,26 @@ func (u *userController) handleCreateUserAssets(w http.ResponseWriter, r *http.R
 
 	user := u.getUserByApiKey(*apiKey)
 
-	for _, currency := range cc {
-		c, ok := ccMap[currency]
+	for _, asset := range assets {
+		_, ok := ccMap[asset.Code]
 		if !ok {
-			respondWithError(w, 400, fmt.Sprintf("Error updating user assets - currency not valid - %v", currency))
+			respondWithError(w, 400, fmt.Sprintf("Error updating user assets - currency code not valid - %v", asset.Code))
 			return
 		}
-		user.Currencies = append(user.Currencies, c)
+		user.Assets = append(user.Assets, asset)
 	}
 
 	respondWithJSON(w, 200, user)
 }
+
+// func (u *userController) handleGetUserBalance(w http.ResponseWriter, r *http.Request) {
+// 	apiKey, err := parseApiKeyFromUrl(w, r)
+// 	if err != nil {
+// 		respondWithError(w, 400, fmt.Sprintf("Error decoding request body - %v", err))
+// 		return
+// 	}
+
+// 	user := u.getUserByApiKey(*apiKey)
+
+// 	for _, currency
+// }
