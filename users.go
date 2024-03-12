@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 type Asset struct {
@@ -130,14 +131,40 @@ func (u *userController) handleCreateUserAssets(w http.ResponseWriter, r *http.R
 	respondWithJSON(w, 200, user)
 }
 
-// func (u *userController) handleGetUserBalance(w http.ResponseWriter, r *http.Request) {
-// 	apiKey, err := parseApiKeyFromUrl(w, r)
-// 	if err != nil {
-// 		respondWithError(w, 400, fmt.Sprintf("Error decoding request body - %v", err))
-// 		return
-// 	}
+func (u *userController) handleGetUserBalance(w http.ResponseWriter, r *http.Request, currencies *[]Currency) {
+	apiKey, err := parseApiKeyFromUrl(w, r)
+	if err != nil {
+		respondWithError(w, 400, fmt.Sprintf("Error decoding request body - %v", err))
+		return
+	}
 
-// 	user := u.getUserByApiKey(*apiKey)
+	ccMap := make(map[string]Currency)
+	for _, c := range *currencies {
+		ccMap[c.Code] = c
+	}
 
-// 	for _, currency
-// }
+	user := u.getUserByApiKey(*apiKey)
+
+	fiatAmount := decimal.Decimal{}
+	for _, asset := range user.Assets {
+		c, ok := ccMap[asset.Code]
+		if !ok {
+			respondWithError(w, 400, fmt.Sprintf("Error getting user balance - currency code not valid - %v", asset.Code))
+			return
+		}
+
+		dp, _ := decimal.NewFromString(c.Price)
+		da, _ := decimal.NewFromString(asset.Amount)
+
+		assetAmount := da.Mul(dp)
+		fiatAmount = fiatAmount.Add(assetAmount)
+	}
+
+	type response struct {
+		EstimateFiatBalance string
+	}
+
+	respondWithJSON(w, 200, response{
+		EstimateFiatBalance: fiatAmount.String(),
+	})
+}

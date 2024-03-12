@@ -31,6 +31,12 @@ func (c *currencyController) handleCreateCurrencies(w http.ResponseWriter, r *ht
 
 	c.currencies = currencies
 
+	// for _, c := range currencies {
+	// 	parsedStr := strings.ReplaceAll(c.Price, ",", "")
+	// 	fmt.Println(parsedStr)
+	// 	fmt.Println(strconv.ParseFloat(parsedStr, 64))
+	// }
+
 	respondWithJSON(w, 201, currencies)
 }
 
