@@ -11,6 +11,8 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
 	"github.com/vitorqueirosz/gwallet/internal/database"
+
+	_ "github.com/lib/pq"
 )
 
 // ROUTES
@@ -83,13 +85,12 @@ func main() {
 
 	router.Get("/healthz", handleReadiness)
 
-	// userController := UserController()
 	currencyController := CurrencyController()
 
 	router.Post("/users", apiConfig.handleCreateUser)
-	router.Get("/users/{apiKey}", apiConfig.handleGetUserByApiKey)
-	router.Post("/users/assets/{apiKey}", assetMiddleware(apiConfig.handleCreateUserAssets, &currencyController.currencies))
-	router.Get("/users/balance/{apiKey}", assetMiddleware(apiConfig.handleGetUserBalance, &currencyController.currencies))
+	router.Get("/users", apiConfig.authMiddleware(apiConfig.handleGetUserByApiKey))
+	// router.Post("/users/assets/{apiKey}", assetMiddleware(apiConfig.handleCreateUserAssets, &currencyController.currencies))
+	// router.Get("/users/balance/{apiKey}", assetMiddleware(apiConfig.handleGetUserBalance, &currencyController.currencies))
 
 	router.Post("/currencies", currencyController.handleCreateCurrencies)
 	router.Get("/currencies", currencyController.handleGetCurrencies)
