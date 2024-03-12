@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
+	"github.com/vitorqueirosz/gwallet/internal/database"
 )
 
 type Asset struct {
@@ -22,14 +24,6 @@ type User struct {
 	Assets []Asset
 }
 
-type userController struct {
-	users []User
-}
-
-func UserController() *userController {
-	return &userController{}
-}
-
 func parseApiKeyFromUrl(w http.ResponseWriter, r *http.Request) (*uuid.UUID, error) {
 	apiKeyStr := chi.URLParam(r, "apiKey")
 	apiKey, err := uuid.Parse(apiKeyStr)
@@ -39,7 +33,7 @@ func parseApiKeyFromUrl(w http.ResponseWriter, r *http.Request) (*uuid.UUID, err
 	return &apiKey, nil
 }
 
-func (u *userController) getUserByApiKey(apiKey uuid.UUID) *User {
+func (apiCfg *apiConfig) getUserByApiKey(apiKey uuid.UUID) *User {
 	var userFromApiKey *User
 	for i, user := range u.users {
 		if user.ApiKey == apiKey {
@@ -49,7 +43,7 @@ func (u *userController) getUserByApiKey(apiKey uuid.UUID) *User {
 	return userFromApiKey
 }
 
-func (u *userController) handleCreateUser(w http.ResponseWriter, r *http.Request) {
+func (apiCfg *apiConfig) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	type body struct {
 		Name string
 	}
@@ -62,17 +56,21 @@ func (u *userController) handleCreateUser(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	user := User{
-		ID:     uuid.New(),
-		Name:   params.Name,
-		ApiKey: uuid.New(),
+	user, err := apiCfg.DB.CreateUser(r.Context(), database.CreateUserParams{
+		ID:        uuid.New(),
+		Name:      params.Name,
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+	})
+	if err != nil {
+		respondWithError(w, 400, fmt.Sprintf("Error creating new user - %v", err))
+		return
 	}
-	u.users = append(u.users, user)
 
 	respondWithJSON(w, 201, user)
 }
 
-func (u *userController) handleGetUserByApiKey(w http.ResponseWriter, r *http.Request) {
+func (apiCfg *apiConfig) handleGetUserByApiKey(w http.ResponseWriter, r *http.Request) {
 	apiKey, err := parseApiKeyFromUrl(w, r)
 	if err != nil {
 		respondWithError(w, 400, fmt.Sprintf("Error decoding request body - %v", err))
@@ -96,7 +94,7 @@ func assetMiddleware(handler assetHandler, c *[]Currency) http.HandlerFunc {
 	}
 }
 
-func (u *userController) handleCreateUserAssets(w http.ResponseWriter, r *http.Request, currencies *[]Currency) {
+func (apiCfg *apiConfig) handleCreateUserAssets(w http.ResponseWriter, r *http.Request, currencies *[]Currency) {
 	assets := []Asset{}
 
 	decoder := json.NewDecoder(r.Body)
@@ -131,7 +129,7 @@ func (u *userController) handleCreateUserAssets(w http.ResponseWriter, r *http.R
 	respondWithJSON(w, 200, user)
 }
 
-func (u *userController) handleGetUserBalance(w http.ResponseWriter, r *http.Request, currencies *[]Currency) {
+func (apiCfg *apiConfig) handleGetUserBalance(w http.ResponseWriter, r *http.Request, currencies *[]Currency) {
 	apiKey, err := parseApiKeyFromUrl(w, r)
 	if err != nil {
 		respondWithError(w, 400, fmt.Sprintf("Error decoding request body - %v", err))

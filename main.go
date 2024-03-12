@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
+	"github.com/vitorqueirosz/gwallet/internal/database"
 )
 
 // ROUTES
@@ -37,6 +39,13 @@ import (
 // code
 // price
 
+// Database setup
+// scrapper
+
+type apiConfig struct {
+	DB *database.Queries
+}
+
 func main() {
 	fmt.Println("")
 
@@ -45,6 +54,21 @@ func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
 		log.Fatal("PORT is not found in the env")
+	}
+
+	dbUrl := os.Getenv("DB_URL")
+	if dbUrl == "" {
+		log.Fatal("DB_URL is not found in the env")
+	}
+
+	conn, err := sql.Open("postgres", dbUrl)
+	if err != nil {
+		log.Fatal("DATABASE CONNECTION FAILED")
+	}
+
+	db := database.New(conn)
+	apiConfig := apiConfig{
+		DB: db,
 	}
 
 	router := chi.NewRouter()
@@ -59,13 +83,13 @@ func main() {
 
 	router.Get("/healthz", handleReadiness)
 
-	userController := UserController()
+	// userController := UserController()
 	currencyController := CurrencyController()
 
-	router.Post("/users", userController.handleCreateUser)
-	router.Get("/users/{apiKey}", userController.handleGetUserByApiKey)
-	router.Post("/users/assets/{apiKey}", assetMiddleware(userController.handleCreateUserAssets, &currencyController.currencies))
-	router.Get("/users/balance/{apiKey}", assetMiddleware(userController.handleGetUserBalance, &currencyController.currencies))
+	router.Post("/users", apiConfig.handleCreateUser)
+	router.Get("/users/{apiKey}", apiConfig.handleGetUserByApiKey)
+	router.Post("/users/assets/{apiKey}", assetMiddleware(apiConfig.handleCreateUserAssets, &currencyController.currencies))
+	router.Get("/users/balance/{apiKey}", assetMiddleware(apiConfig.handleGetUserBalance, &currencyController.currencies))
 
 	router.Post("/currencies", currencyController.handleCreateCurrencies)
 	router.Get("/currencies", currencyController.handleGetCurrencies)
@@ -76,9 +100,8 @@ func main() {
 	}
 	log.Printf("Server staring on port %v", port)
 
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 	if err != nil {
 		log.Fatal(err)
 	}
-
 }
