@@ -85,15 +85,13 @@ func main() {
 
 	router.Get("/healthz", handleReadiness)
 
-	currencyController := CurrencyController()
-
 	router.Post("/users", apiConfig.handleCreateUser)
 	router.Get("/users", apiConfig.authMiddleware(apiConfig.handleGetUserByApiKey))
 	// router.Post("/users/assets/{apiKey}", assetMiddleware(apiConfig.handleCreateUserAssets, &currencyController.currencies))
 	// router.Get("/users/balance/{apiKey}", assetMiddleware(apiConfig.handleGetUserBalance, &currencyController.currencies))
 
-	router.Post("/currencies", currencyController.handleCreateCurrencies)
-	router.Get("/currencies", currencyController.handleGetCurrencies)
+	router.Post("/currencies", apiConfig.handleCreateCurrencies)
+	router.Get("/currencies", apiConfig.handleGetCurrencies)
 
 	server := http.Server{
 		Handler: router,

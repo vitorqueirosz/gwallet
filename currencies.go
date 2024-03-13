@@ -4,6 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/vitorqueirosz/gwallet/internal/database"
 )
 
 type Currency struct {
@@ -12,34 +16,40 @@ type Currency struct {
 	Price string
 }
 
-type currencyController struct {
-	currencies []Currency
-}
-
-func CurrencyController() *currencyController {
-	return &currencyController{}
-}
-
-func (c *currencyController) handleCreateCurrencies(w http.ResponseWriter, r *http.Request) {
-	currencies := []Currency{}
+func (apiCfg *apiConfig) handleCreateCurrencies(w http.ResponseWriter, r *http.Request) {
+	cb := []Currency{}
 	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&currencies)
+	err := decoder.Decode(&cb)
 	if err != nil {
 		respondWithError(w, 400, fmt.Sprintf("Error decoding request body - %v", err))
 		return
 	}
 
-	c.currencies = currencies
+	cc := []database.Currency{}
+	for _, c := range cb {
+		currency, err := apiCfg.DB.CreateCurrencies(r.Context(), database.CreateCurrenciesParams{
+			ID:        uuid.New(),
+			Name:      c.Name,
+			Code:      c.Code,
+			Price:     c.Price,
+			CreatedAt: time.Now().UTC(),
+			UpdatedAt: time.Now().UTC(),
+		})
+		if err != nil {
+			respondWithError(w, 400, fmt.Sprintf("Error creating currency - %v", err))
+			return
+		}
+		cc = append(cc, currency)
+	}
 
-	// for _, c := range currencies {
-	// 	parsedStr := strings.ReplaceAll(c.Price, ",", "")
-	// 	fmt.Println(parsedStr)
-	// 	fmt.Println(strconv.ParseFloat(parsedStr, 64))
-	// }
-
-	respondWithJSON(w, 201, currencies)
+	respondWithJSON(w, 201, cc)
 }
 
-func (c *currencyController) handleGetCurrencies(w http.ResponseWriter, r *http.Request) {
-	respondWithJSON(w, 201, c.currencies)
+func (apiCfg *apiConfig) handleGetCurrencies(w http.ResponseWriter, r *http.Request) {
+	currencies, err := apiCfg.DB.GetCurrencies(r.Context())
+	if err != nil {
+		respondWithError(w, 400, fmt.Sprintf("Error fetching currencies - %v", err))
+		return
+	}
+	respondWithJSON(w, 201, currencies)
 }
