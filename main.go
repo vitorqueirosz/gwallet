@@ -15,35 +15,6 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// ROUTES
-
-// Register user
-// Create Currencies - memory for now, once we have the scrapper we're going to pushed them to the db
-// Update currencies by scrapping in x interval
-// Register assets (currencies)
-// Get total balance
-// Get currencies
-// Get currency by id
-
-// User
-// name
-// api_key
-// currencies
-
-// User -> asset
-// name
-// code
-// amount
-// user_id
-
-// Currency
-// name
-// code
-// price
-
-// Database setup
-// scrapper
-
 type apiConfig struct {
 	DB *database.Queries
 }
@@ -87,8 +58,8 @@ func main() {
 
 	router.Post("/users", apiConfig.handleCreateUser)
 	router.Get("/users", apiConfig.authMiddleware(apiConfig.handleGetUserByApiKey))
-	// router.Post("/users/assets/{apiKey}", assetMiddleware(apiConfig.handleCreateUserAssets, &currencyController.currencies))
-	// router.Get("/users/balance/{apiKey}", assetMiddleware(apiConfig.handleGetUserBalance, &currencyController.currencies))
+	router.Post("/users/assets", apiConfig.authMiddleware(apiConfig.handleCreateUserAssets))
+	router.Get("/users/balance", apiConfig.authMiddleware(apiConfig.handleGetUserBalance))
 
 	router.Post("/currencies", apiConfig.handleCreateCurrencies)
 	router.Get("/currencies", apiConfig.handleGetCurrencies)

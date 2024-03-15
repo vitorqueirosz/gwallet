@@ -1,0 +1,28 @@
+// ROUTES
+
+// Register user
+// Create Currencies - memory for now, once we have the scrapper we're going to pushed them to the db
+// Update currencies by scrapping in x interval
+// Register assets (currencies)
+// Get total balance
+// Get currencies
+// Get currency by id
+
+// User
+// name
+// api_key
+// currencies
+
+// User -> asset
+// name
+// code
+// amount
+// user_id
+
+// Currency
+// name
+// code
+// price
+
+// Database setup
+// scrapper
