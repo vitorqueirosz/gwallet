@@ -81,3 +81,64 @@ func (q *Queries) GetCurrencies(ctx context.Context) ([]Currency, error) {
 	}
 	return items, nil
 }
+
+const getCurrencyByCode = `-- name: GetCurrencyByCode :one
+SELECT id, name, code, price, created_at, updated_at FROM currencies
+WHERE code = $1
+`
+
+func (q *Queries) GetCurrencyByCode(ctx context.Context, code string) (Currency, error) {
+	row := q.db.QueryRowContext(ctx, getCurrencyByCode, code)
+	var i Currency
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Code,
+		&i.Price,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateCurrencyPrice = `-- name: UpdateCurrencyPrice :many
+UPDATE currencies
+SET price = $2
+WHERE id = $1
+RETURNING id, name, code, price, created_at, updated_at
+`
+
+type UpdateCurrencyPriceParams struct {
+	ID    uuid.UUID
+	Price string
+}
+
+func (q *Queries) UpdateCurrencyPrice(ctx context.Context, arg UpdateCurrencyPriceParams) ([]Currency, error) {
+	rows, err := q.db.QueryContext(ctx, updateCurrencyPrice, arg.ID, arg.Price)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Currency
+	for rows.Next() {
+		var i Currency
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Code,
+			&i.Price,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

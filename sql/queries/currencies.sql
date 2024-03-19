@@ -5,3 +5,14 @@ RETURNING *;
 
 -- name: GetCurrencies :many
 SELECT * FROM currencies;
+
+-- name: GetCurrencyByCode :one
+SELECT * FROM currencies
+WHERE code = $1;
+
+
+-- name: UpdateCurrencyPrice :many
+UPDATE currencies
+SET price = $2
+WHERE id = $1
+RETURNING *;

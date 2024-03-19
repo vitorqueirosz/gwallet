@@ -53,3 +53,12 @@ func (apiCfg *apiConfig) handleGetCurrencies(w http.ResponseWriter, r *http.Requ
 	}
 	respondWithJSON(w, 201, currencies)
 }
+
+func (apiCfg *apiConfig) handleUpdateCurrencies(w http.ResponseWriter, r *http.Request) {
+	currencies, err := apiCfg.DB.GetCurrencies(r.Context())
+	if err != nil {
+		respondWithError(w, 400, fmt.Sprintf("Error fetching currencies - %v", err))
+		return
+	}
+	respondWithJSON(w, 201, currencies)
+}
