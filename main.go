@@ -44,6 +44,8 @@ func main() {
 		DB: db,
 	}
 
+	go startCryptoScrapper(db)
+
 	router := chi.NewRouter()
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
